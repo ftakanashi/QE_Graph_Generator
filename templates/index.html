@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}Word-Level QE Graph Generator{% endblock %}
+
+{% block styles %}
+    <link href="{{ url_for('static',filename='css/bootstrap.min.css') }}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div style="height: 50px;"></div>
+    <div class="row">
+        <div class="col-lg-3 col-xs-1"></div>
+        <div class="col-lg-6 col-xs-10">
+            <div class="form-group">
+                <label class="control-label">Please select a prefix of a group of files:</label>
+                <select class="form-control" id="prefixSelect">
+                    {% for fn in fn_list %}
+                    <option value="{{ fn }}">{{ fn }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if not fn_list %}
+            <p class="text-danger">Note that ./data is empty!</p>
+            {% endif %}
+            <div class="form-group">
+                <label class="control-label">Please select the type of graph:</label>
+                <select class="form-control" id="typeSelect">
+                    {% for tp in type_list %}
+                    <option value="{{ tp }}">{{ tp }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button class="btn btn-default btn-sm" id="submit">Go!</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static',filename='js/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static',filename='js/bootstrap.min.js') }}"></script>
+    <script src="{{ url_for('static',filename='layer/layer.js') }}"></script>
+    <script>
+    $(document).ready(function(){
+        $('#submit').click(function(event){
+            event.preventDefault();
+            var groupName = $('#prefixSelect').val();
+            var typeName = $('#typeSelect').val();
+            location.href = '/gen?groupName=' + groupName + '&typeName=' + typeName;
+        });
+    });
+    </script>
+{% endblock %}

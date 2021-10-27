@@ -1,0 +1,299 @@
+{% extends 'base.html' %}
+
+{% block title %}Word-Level QE Graph Generator{% endblock %}
+
+{% block styles %}
+    <link href="{{ url_for('static',filename='css/bootstrap.min.css') }}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<div style="height: 50px;"></div>
+<div class="row">
+    <div class="col-lg-1"></div>
+    <div class="col-lg-10 col-xs-12">
+
+        <div id="resPanel" style="width: 100%; min-height: 300px; border: 1px solid;"></div>
+
+        <div class="row">
+            <div class="col-lg-12 cols-xs-12">
+                <div style="padding: 20px; text-align: center;">
+                    <button class="btn btn-default btn-sm" id="prevBtn">← prev</button>
+                    <button class="btn btn-default btn-sm" id="nextBtn">next →</button>
+                </div>
+                <div style="padding: 20px; text-align: center;">
+                    <h4>Mode: {{ typeName }}</h4>
+                    <h4>{{ index + 1 }} / {{ indexLength }}</h4>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-4 col-xs-3"></div>
+            <div class="col-lg-4 col-xs-6">
+                <div style="text-align: center;">
+                    <a href="javascript:void(0);" id="toggleAdjustPanel">More Settings</a>
+                </div>
+                <div id="adjustPanel" style="display: none; background: lightgrey; padding: 10px; border-radius: 5px;">
+                    <div class="form-group">
+                        <label class="control-label" for="maxWidthInput">MaxWidth</label>
+                        <input class="form-control" type="number" id="maxWidthInput" value="1000" />
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label" for="maxHeightInput">MaxHeight</label>
+                        <input class="form-control" type="number" id="maxHeightInput" value="200" />
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label" for="fontSizeInput">FontSize</label>
+                        <input class="form-control" type="number" id="fontSizeInput" value="20" />
+                    </div>
+                    <div style="text-align: center;">
+                        <button class="btn btn-primary btn-sm" id="reloadBtn">reload</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-12 col-xs-12">
+                <div style="padding: 10px; text-align: center;">
+                    <a href="/" class="btn btn-default">To Top</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <input type="hidden" id="groupNameInput" value="{{ groupName }}" />
+    <input type="hidden" id="typeNameInput" value="{{ typeName }}" />
+    <input type="hidden" id="indexInput" value="{{ index }}" />
+    <input type="hidden" id="srcInput" value="{{ src }}" />
+    <input type="hidden" id="mtInput" value="{{ mt }}" />
+    {% if source_tags is defined %}
+    <input type="hidden" id="sourceTagsInput" value="{{ source_tags }}" />
+    {% endif %}
+    {% if mtword_tags is defined %}
+    <input type="hidden" id="mtWordTagsInput" value="{{ mtword_tags }}" />
+    {% endif %}
+    {% if gap_tags is defined %}
+    <input type="hidden" id="gapTagsInput" value="{{ gap_tags }}" />
+    {% endif %}
+    {% if src_mt_align is defined %}
+    <input type="hidden" id="srcMtAlignInput" value="{{ src_mt_align }}" />
+    {% endif %}
+    {% if src_gap_align is defined %}
+    <input type="hidden" id="srcGapAlignInput" value="{{ src_gap_align }}" />
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static',filename='js/jquery.min.js') }}"></script>
+<script src="{{ url_for('static',filename='js/bootstrap.min.js') }}"></script>
+<script src="{{ url_for('static',filename='layer/layer.js') }}"></script>
+<script src="{{ url_for('static', filename='js/echarts.min.js') }}"></script>
+<script>
+    function str2Align(s){
+        var strPairs = s.length > 0 ? s.split(' ') : [];
+        var res = [];
+        for(var i=0;i<strPairs.length;i++){
+            var pair = strPairs[i].split('-');
+            var a = parseInt(pair[0]);
+            var b = parseInt(pair[1]);
+            res.push([a, b]);
+        }
+        return res;
+    }
+
+    function domExists(domId){
+        return $('#' + domId).length > 0;
+    }
+
+    function loadMyChart(currTypeName){
+        // 数据准备
+        var srcWords = $('#srcInput').val().split(' ');
+        var mtWords = $('#mtInput').val().split(' ');
+        var sourceTags = domExists('sourceTagsInput') ? $('#sourceTagsInput').val().split(' ') : [];
+        var mtWordTags = domExists('mtWordTagsInput') ? $('#mtWordTagsInput').val().split(' ') : [];
+        var gapTags = domExists('gapTagsInput') ? $('#gapTagsInput').val().split(' ') : [];
+
+        // 配置准备
+        var maxWidth = parseInt($('#maxWidthInput').val());
+        var maxHeight = parseInt($('#maxHeightInput').val());
+        var wordFontSize = parseInt($('#fontSizeInput').val());
+        var srcLength = srcWords.length;
+        var mtLength = mtWords.length;
+        var srcWidthBase = maxWidth / (srcLength - 1);
+        var mtWidthBase = maxWidth / ((mtLength - 1) * 2 + 2);
+
+        // 绘图基础配置
+        var myChart = echarts.init(document.getElementById('resPanel'));
+        myChart.clear();
+        var option = {
+            animationDurationUpdate: 1500,
+            animationEasingUpdate: 'quinticInOut',
+            series: [
+                {
+                    type: 'graph',
+                    draggable: true,
+                    layout: 'none',
+                    symbol: 'recs',
+                    symbolSize: 50,
+                    itemStyle: {
+                        color: 'rgba(128, 128, 128, 0)',
+                    },
+                    roam: true,
+                    focusNodeAdjacency: true,
+                    label: {
+                        show: true,
+                        align: 'center',
+                        position: 'inside',
+                        rich: {
+                            ok_tag: {color: 'green', backgroundColor: 'lightgreen', padding: 2},
+                            bad_tag: {color: 'red', backgroundColor: 'pink', padding: 2},
+                            norm_word: {color: 'black', fontSize: wordFontSize},
+                            gap_word: {color: 'lightgrey', fontSize: wordFontSize/1.2},
+                        }
+                    },
+                    edgeSymbol: ['circle', 'circle'],
+                    edgeSymbolSize: [5, 5],
+                    data: [],
+                    lineStyle: {
+                        opacity: 0.8,
+                        width: 2,
+                        curveness: 0
+                    },
+                    emphasis: {
+                        lineStyle: {
+                            width: 5,
+                            opacity: 1.0
+                        }
+                    }
+                },
+            ]
+        };
+
+        // data部分配置
+        var myData = [];
+        // source
+        for(i=0;i<srcLength;i++){
+            var name = '';
+            if (currTypeName !== 'simple'){
+                name += (sourceTags[i] === 'OK' ? '{ok_tag|OK}\n' : '{bad_tag|' + sourceTags[i] + '}\n');
+            }
+            name += ('{norm_word|' + srcWords[i] + '}');
+            myData.push({
+                y: 0,
+                x: srcWidthBase * i,
+                name: name,
+                id: 'src_' + i.toString(),
+            });
+        }
+        // MT
+        for(var i=0;i<mtLength;i++){
+
+            // MT Gap
+            if (currTypeName !== 'simple') {
+                var gapName = '';
+                if (gapTags[i] === 'OK') {
+                    gapName += '{gap_word|}';
+                } else {
+                    gapName += '{gap_word|}\n';
+                    gapName += '{bad_tag|' + gapTags[i] + '}';
+                }
+                myData.push({
+                    y: maxHeight,
+                    x: mtWidthBase * (i * 2),
+                    name: gapName,
+                    id: 'gap_' + i.toString(),
+                });
+            }
+
+            // MT Word
+            var wordName = '';
+            wordName += ('{norm_word|' + mtWords[i] + '}');
+            if (currTypeName !== 'simple'){
+                wordName += (mtWordTags[i] == 'OK' ? '\n{ok_tag|OK}' : '\n{bad_tag|' + mtWordTags[i] + '}');
+            }
+            myData.push({
+                y: maxHeight,
+                x: mtWidthBase * (i*2 + 1),
+                name: wordName,
+                id: 'mtword_' + i.toString(),
+            });
+
+        }
+        option.series[0].data = myData;
+
+        // links部分配置
+        links = [];
+        if (currTypeName === 'orig_align'){
+            // todo 添加original + alignment的逻辑
+        }
+        else if(currTypeName === 'refined'){
+            if (!domExists('srcMtAlignInput') || !domExists('srcGapAlignInput')){
+                layer.alert('You need to provide src-mt.align & src-gap.align.');
+            }
+            var srcMtAlign = str2Align($('#srcMtAlignInput').val());
+            var srcGapAlign = str2Align($('#srcGapAlignInput').val());
+
+            for(i=0;i<srcMtAlign.length;i++){
+                align = srcMtAlign[i];
+                a = align[0];
+                b = align[1];
+                if(mtWordTags[b] === 'OK') continue;
+                links.push({
+                    source: 'src_' + a,
+                    target: 'mtword_' + b,
+                    lineStyle: {color: 'red'},
+                });
+            }
+            for(i=0;i<srcGapAlign.length;i++){
+                align = srcGapAlign[i];
+                a = align[0];
+                b = align[1];
+                if(gapTags[b] === 'OK') continue;
+                links.push({
+                    source: 'src_' + a,
+                    target: 'gap_' + b,
+                    lineStyle: {color: 'purple'},
+                });
+            }
+        }
+        option.series[0].links = links;
+
+        myChart.setOption(option);
+    }
+
+    $(document).ready(function(){
+        $('#toggleAdjustPanel').click(function(event){
+            event.preventDefault();
+            $('#adjustPanel').slideToggle();
+        });
+
+        var currGroupName = $('#groupNameInput').val();
+        var currTypeName = $('#typeNameInput').val();
+        if (currTypeName === 'orig_align'){
+            layer.msg('Mode [' + currTypeName + '] is under development.');
+            currTypeName = 'simple';
+        }
+        var currIndex = parseInt($('#indexInput').val());
+        $('#prevBtn').click(function(event){
+            event.preventDefault();
+            location.href = '/gen?groupName=' + currGroupName + '&typeName=' + currTypeName +
+                '&index=' + (currIndex - 1).toString();
+        });
+        $('#nextBtn').click(function(event){
+            event.preventDefault();
+            location.href = '/gen?groupName=' + currGroupName + '&typeName=' + currTypeName +
+                '&index=' + (currIndex + 1).toString();
+        });
+        $('#reloadBtn').click(function(event){
+            event.preventDefault();
+            loadMyChart(currTypeName);
+        });
+
+        loadMyChart(currTypeName);
+
+    });
+</script>
+{% endblock %}
