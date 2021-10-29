@@ -25,15 +25,12 @@ def main():
     if request.method == 'GET':
         ctx = {}
         data_dir = os.path.join(WORKSPACE, 'data')
-        seen = set()
-        for fn in os.listdir(data_dir):
-            prefix = fn.split('.')[0]
-            if prefix in seen: continue
-            seen.add(prefix)
-
-        ctx['fn_list'] = list(seen)
+        ctx['subdir_list'] = sorted([d for d in os.listdir(data_dir)
+                                     if os.path.isdir(os.path.join(WORKSPACE, 'data', d))])
         ctx['type_list'] = GRAPH_TYPES
         return render_template('index.html', **ctx)
+    else:
+        return render_template('error.html', err_msg='Wrong method.')
 
 @app.route('/gen', methods=['GET'])
 def generate():
@@ -65,7 +62,7 @@ def generate():
 
     files_lines = []
     for suf in suffixes:
-        fn = f'{group_name}.{suf}'
+        fn = os.path.join(group_name, suf)
         if not os.path.isfile(os.path.join(WORKSPACE, 'data', fn)):
             return render_template('error.html', err_msg=f'Cannot find file [{fn}] in data directory.')
         lines = read_fn(os.path.join(WORKSPACE, 'data', fn))

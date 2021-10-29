@@ -13,14 +13,14 @@
         <div class="col-lg-3 col-xs-1"></div>
         <div class="col-lg-6 col-xs-10">
             <div class="form-group">
-                <label class="control-label">Please select a prefix of a group of files:</label>
+                <label class="control-label">Please select a sub-directory:</label>
                 <select class="form-control" id="prefixSelect">
-                    {% for fn in fn_list %}
-                    <option value="{{ fn }}">{{ fn }}</option>
+                    {% for subdir in subdir_list %}
+                    <option value="{{ subdir }}">{{ subdir }}</option>
                     {% endfor %}
                 </select>
             </div>
-            {% if not fn_list %}
+            {% if not subdir_list %}
             <p class="text-danger">Note that ./data is empty!</p>
             {% endif %}
             <div class="form-group">

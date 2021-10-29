@@ -131,6 +131,7 @@
         var option = {
             animationDurationUpdate: 1500,
             animationEasingUpdate: 'quinticInOut',
+            backgroundColor: '#f6f6f6',
             series: [
                 {
                     type: 'graph',
@@ -152,10 +153,11 @@
                             bad_tag: {color: 'red', backgroundColor: 'pink', padding: 2},
                             norm_word: {color: 'black', fontSize: wordFontSize},
                             gap_word: {color: 'lightgrey', fontSize: wordFontSize/1.2},
+                            gap_bad_word: {color: 'red', fontSize: wordFontSize/1.2},
                         }
                     },
-                    edgeSymbol: ['circle', 'circle'],
-                    edgeSymbolSize: [5, 5],
+                    edgeSymbol: ['arrow', 'arrow'],
+                    edgeSymbolSize: [10, 10],
                     data: [],
                     lineStyle: {
                         opacity: 0.8,
@@ -197,7 +199,7 @@
                 if (gapTags[i] === 'OK') {
                     gapName += '{gap_word|}';
                 } else {
-                    gapName += '{gap_word|}\n';
+                    gapName += '{gap_bad_word|[G]}\n';
                     gapName += '{bad_tag|' + gapTags[i] + '}';
                 }
                 myData.push({
@@ -221,6 +223,21 @@
                 id: 'mtword_' + i.toString(),
             });
 
+        }
+        if (currTypeName !== 'simple') {
+            var gapName = '';
+            if (gapTags[mtLength] === 'OK') {
+                gapName += '{gap_word|}';
+            } else {
+                gapName += '{gap_bad_word|[G]}\n';
+                gapName += '{bad_tag|' + gapTags[mtLength] + '}';
+            }
+            myData.push({
+                y: maxHeight,
+                x: mtWidthBase * (mtLength * 2),
+                name: gapName,
+                id: 'gap_' + mtLength.toString(),
+            });
         }
         option.series[0].data = myData;
 
