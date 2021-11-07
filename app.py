@@ -43,6 +43,9 @@ def generate():
         return render_template('error.html', err_msg=f'Mode [{type_name}] is not supported.'), 400
 
     ctx = {}
+    ctx['maxHeight'] = request.args.get('maxHeight', 200)
+    ctx['maxWidth'] = request.args.get('maxWidth', 1000)
+    ctx['fontSize'] = request.args.get('fontSize', 20)
 
     def read_fn(fn):
         with open(fn, 'r') as f:
@@ -79,6 +82,7 @@ def generate():
 
     ctx['groupName'] = group_name
     ctx['typeName'] = type_name
+    ctx['allTypes'] = GRAPH_TYPES
     ctx['index'] = content_i
     ctx['indexLength'] = std_len
     return render_template('res.html', **ctx)

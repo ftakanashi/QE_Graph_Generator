@@ -9,8 +9,7 @@
 {% block content %}
 <div style="height: 50px;"></div>
 <div class="row">
-    <div class="col-lg-1"></div>
-    <div class="col-lg-10 col-xs-12">
+    <div class="col-lg-12 col-xs-12">
 
         <div id="resPanel" style="width: 100%; min-height: 300px; border: 1px solid;"></div>
 
@@ -28,6 +27,21 @@
         </div>
 
         <div class="row">
+            <div class="col-lg-5 col-xs-3"></div>
+            <div class="col-lg-2 col-xs-6">
+                <div style="text-align: center; padding:20px;">
+                    <div class="form-group">
+                        <select class="form-control" id="modeSwitchSelect">
+                            {% for tp in allTypes %}
+                                <option value="{{ tp }}" {% if typeName == tp %}selected{% endif %}>{{ tp }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
             <div class="col-lg-4 col-xs-3"></div>
             <div class="col-lg-4 col-xs-6">
                 <div style="text-align: center;">
@@ -36,15 +50,15 @@
                 <div id="adjustPanel" style="display: none; background: lightgrey; padding: 10px; border-radius: 5px;">
                     <div class="form-group">
                         <label class="control-label" for="maxWidthInput">MaxWidth</label>
-                        <input class="form-control" type="number" id="maxWidthInput" value="1000" />
+                        <input class="form-control" type="number" id="maxWidthInput" value="{{ maxWidth }}" />
                     </div>
                     <div class="form-group">
                         <label class="control-label" for="maxHeightInput">MaxHeight</label>
-                        <input class="form-control" type="number" id="maxHeightInput" value="200" />
+                        <input class="form-control" type="number" id="maxHeightInput" value="{{ maxHeight }}" />
                     </div>
                     <div class="form-group">
                         <label class="control-label" for="fontSizeInput">FontSize</label>
-                        <input class="form-control" type="number" id="fontSizeInput" value="20" />
+                        <input class="form-control" type="number" id="fontSizeInput" value="{{ fontSize }}" />
                     </div>
                     <div style="text-align: center;">
                         <button class="btn btn-primary btn-sm" id="reloadBtn">reload</button>
@@ -92,13 +106,13 @@
 <script src="{{ url_for('static',filename='layer/layer.js') }}"></script>
 <script src="{{ url_for('static', filename='js/echarts.min.js') }}"></script>
 <script>
-    function str2Align(s){
-        var strPairs = s.length > 0 ? s.split(' ') : [];
+    function str2Align(s, isGap=false){
+        var strPairs = s.length > 0 ? s.split(/ +/) : [];
         var res = [];
         for(var i=0;i<strPairs.length;i++){
             var pair = strPairs[i].split('-');
             var a = parseInt(pair[0]);
-            var b = parseInt(pair[1]);
+            var b = isGap ? parseInt(pair[1]) / 2 : parseInt(pair[1]);
             res.push([a, b]);
         }
         return res;
@@ -110,11 +124,11 @@
 
     function loadMyChart(currTypeName){
         // 数据准备
-        var srcWords = $('#srcInput').val().split(' ');
-        var mtWords = $('#mtInput').val().split(' ');
-        var sourceTags = domExists('sourceTagsInput') ? $('#sourceTagsInput').val().split(' ') : [];
-        var mtWordTags = domExists('mtWordTagsInput') ? $('#mtWordTagsInput').val().split(' ') : [];
-        var gapTags = domExists('gapTagsInput') ? $('#gapTagsInput').val().split(' ') : [];
+        var srcWords = $('#srcInput').val().split(/ +/);
+        var mtWords = $('#mtInput').val().split(/ +/);
+        var sourceTags = domExists('sourceTagsInput') ? $('#sourceTagsInput').val().split(/ +/) : [];
+        var mtWordTags = domExists('mtWordTagsInput') ? $('#mtWordTagsInput').val().split(/ +/) : [];
+        var gapTags = domExists('gapTagsInput') ? $('#gapTagsInput').val().split(/ +/) : [];
 
         // 配置准备
         var maxWidth = parseInt($('#maxWidthInput').val());
@@ -141,6 +155,7 @@
                     symbolSize: 50,
                     itemStyle: {
                         color: 'rgba(128, 128, 128, 0)',
+                        borderWidth: 0.5
                     },
                     roam: true,
                     focusNodeAdjacency: true,
@@ -156,8 +171,8 @@
                             gap_bad_word: {color: 'red', fontSize: wordFontSize/1.2},
                         }
                     },
-                    edgeSymbol: ['arrow', 'arrow'],
-                    edgeSymbolSize: [10, 10],
+                    edgeSymbol: ['circle', 'circle'],
+                    edgeSymbolSize: [5, 5],
                     data: [],
                     lineStyle: {
                         opacity: 0.8,
@@ -244,25 +259,46 @@
         // links部分配置
         links = [];
         if (currTypeName === 'orig_align'){
-            // todo 添加original + alignment的逻辑
+            if(!domExists('srcMtAlignInput')){
+                layer.alert('You need to provide src-mt.align.');
+            }
+            var srcMtAlign = str2Align($('#srcMtAlignInput').val());
+            for(i=0;i<srcMtAlign.length;i++){
+                align = srcMtAlign[i];
+                a = align[0];
+                b = align[1];
+                links.push({
+                    source: 'src_' + a,
+                    target: 'mtword_' + b,
+                });
+            }
         }
         else if(currTypeName === 'refined'){
             if (!domExists('srcMtAlignInput') || !domExists('srcGapAlignInput')){
                 layer.alert('You need to provide src-mt.align & src-gap.align.');
             }
             var srcMtAlign = str2Align($('#srcMtAlignInput').val());
-            var srcGapAlign = str2Align($('#srcGapAlignInput').val());
+            var srcGapAlign = str2Align($('#srcGapAlignInput').val(), true);
 
             for(i=0;i<srcMtAlign.length;i++){
                 align = srcMtAlign[i];
                 a = align[0];
                 b = align[1];
-                if(mtWordTags[b] === 'OK') continue;
-                links.push({
-                    source: 'src_' + a,
-                    target: 'mtword_' + b,
-                    lineStyle: {color: 'red'},
-                });
+                if(mtWordTags[b] === 'OK'){
+                    links.push({
+                        source: 'src_' + a,
+                        target: 'mtword_' + b,
+                        lineStyle: {width: 0.5, color: 'grey', type: 'dashed'}
+                    })
+                }
+                else{
+                    links.push({
+                        source: 'src_' + a,
+                        target: 'mtword_' + b,
+                        lineStyle: {color: 'red', width: 1},
+                    });
+                }
+
             }
             for(i=0;i<srcGapAlign.length;i++){
                 align = srcGapAlign[i];
@@ -281,28 +317,59 @@
         myChart.setOption(option);
     }
 
+    function uri2Map(){
+        var uri = location.search.substr(1);
+        var dict = {};
+        var kvs = uri.split('&');
+        for(i=0;i<kvs.length;i++){
+            item = kvs[i].split('=');
+            dict[item[0]] = item[1];
+        }
+        return dict;
+    }
+
+    function map2Uri(obj){
+        ans = '';
+        keys = Object.keys(obj);
+        for(i=0;i<keys.length;i++){
+            ans += '&' + keys[i] + '=' + obj[keys[i]];
+        }
+        ans = ans.substr(1);
+        return '?' + ans;
+    }
+
     $(document).ready(function(){
         $('#toggleAdjustPanel').click(function(event){
             event.preventDefault();
             $('#adjustPanel').slideToggle();
         });
 
+        $('#modeSwitchSelect').on('change', function(event){
+            var newMode = $(this).val();
+            uriMap = uri2Map();
+            uriMap.typeName = newMode;
+            location.search = map2Uri(uriMap);
+        });
+
         var currGroupName = $('#groupNameInput').val();
         var currTypeName = $('#typeNameInput').val();
-        if (currTypeName === 'orig_align'){
-            layer.msg('Mode [' + currTypeName + '] is under development.');
-            currTypeName = 'simple';
-        }
         var currIndex = parseInt($('#indexInput').val());
         $('#prevBtn').click(function(event){
             event.preventDefault();
-            location.href = '/gen?groupName=' + currGroupName + '&typeName=' + currTypeName +
-                '&index=' + (currIndex - 1).toString();
+            location.href = '/gen?groupName=' + currGroupName +
+                '&typeName=' + currTypeName +
+                '&index=' + (currIndex - 1).toString() +
+                '&fontSize=' + $('#fontSizeInput').val() +
+                '&maxWidth=' + $('#maxWidthInput').val() +
+                '&maxHeight=' + $('#maxHeightInput').val();
         });
         $('#nextBtn').click(function(event){
             event.preventDefault();
             location.href = '/gen?groupName=' + currGroupName + '&typeName=' + currTypeName +
-                '&index=' + (currIndex + 1).toString();
+                '&index=' + (currIndex + 1).toString() +
+                '&fontSize=' + $('#fontSizeInput').val() +
+                '&maxWidth=' + $('#maxWidthInput').val() +
+                '&maxHeight=' + $('#maxHeightInput').val();
         });
         $('#reloadBtn').click(function(event){
             event.preventDefault();
