@@ -43,8 +43,11 @@ def generate():
         return render_template('error.html', err_msg=f'Mode [{type_name}] is not supported.'), 400
 
     ctx = {}
-    ctx['maxHeight'] = request.args.get('maxHeight', 200)
+    ctx['maxHeight'] = request.args.get('maxHeight', 150)
     ctx['maxWidth'] = request.args.get('maxWidth', 1000)
+    # ctx['srcWidthStride'] = request.args.get('srcWidthStride', 50)
+    # ctx['mtWidthStride'] = request.args.get('mtWidthStride', 50)
+    ctx['baseGapWidth'] = request.args.get('baseGapWidth', 10)
     ctx['fontSize'] = request.args.get('fontSize', 20)
 
     def read_fn(fn):
@@ -89,4 +92,4 @@ def generate():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, threaded=True)
+    app.run(host='0.0.0.0', debug=True, threaded=True)
