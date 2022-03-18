@@ -49,6 +49,7 @@ def generate():
     # ctx['mtWidthStride'] = request.args.get('mtWidthStride', 50)
     ctx['baseGapWidth'] = request.args.get('baseGapWidth', 10)
     ctx['fontSize'] = request.args.get('fontSize', 20)
+    ctx['hideAllGap'] = request.args.get('hideAllGap', 0)
 
     def read_fn(fn):
         with open(fn, 'r') as f:
@@ -82,6 +83,10 @@ def generate():
     for i, suf in enumerate(suffixes):
         suf = suf.replace('refine.', '').replace('.', '_').replace('-', '_')
         ctx[suf] = files_lines[i][content_i]
+
+    # some extra information context
+    ctx['src_no_split'] = files_lines[0][content_i].replace('|', ' ')
+    ctx['mt_no_blank'] = ''.join(files_lines[1][content_i].split())
 
     ctx['groupName'] = group_name
     ctx['typeName'] = type_name
